@@ -1,23 +1,21 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSnapshot } from "valtio";
-
 import state from "../store";
-
-import { reader } from "../config/helpers";
+import { download } from "../assets";
+import { downloadCanvasToImage, reader } from "../config/helpers";
 import { EditorTabs, FilterTabs, DecalTypes } from "../config/constants";
 import { fadeAnimation, slideAnimation } from "../config/motion";
 import {
   AIPicker,
-  FilePicker,
   ColorPicker,
   CustomButton,
+  FilePicker,
   Tab,
 } from "../components";
 
 const Customizer = () => {
   const snap = useSnapshot(state);
-
   const [file, setFile] = useState("");
   const [prompt, setPrompt] = useState("");
   const [generatingImg, setGeneratingImg] = useState(false);
@@ -33,7 +31,7 @@ const Customizer = () => {
         return <ColorPicker />;
       case "filepicker":
         return (
-          <FilePicker setFile={setFile} file={file} readFile={readFile} />
+          <FilePicker file={file} setFile={setFile} readFile={readFile} />
         );
       case "aipicker":
         return (
@@ -49,55 +47,23 @@ const Customizer = () => {
     }
   };
 
-  // if ChatGPT exists, we can use it
-
-  // const handleSubmit = async (type) => {
-  //   if (!prompt) return alert("Please enter a prompt");
-
-  //   try {
-  //     setGeneratingImg(true);
-
-  //     const response = await fetch("http://localhost:8080/api/v1/dalle", {
-  //       method: "POST",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //       },
-  //       body: JSON.stringify({
-  //         prompt,
-  //       }),
-  //     });
-
-  //     const data = await response.json();
-
-  //     handleDecals(type, `data:image/png;base64,${data.photo}`);
-  //   } catch (error) {
-  //     alert(error);
-  //   } finally {
-  //     setGeneratingImg(false);
-  //     setActiveEditorTab("");
-  //   }
-  // };
   const handleSubmit = async (type) => {
-    if (!prompt) {
-      alert("Please enter text");
-      return;
-    }
-
+    if (!prompt) return alert("Please enter a prompt");
     try {
       setGeneratingImg(true);
-
-      // Instead of sending a server request, we'll show a message to the user
-      alert(
-        `This action is currently unavailable. Entered text: ${prompt}`
-      );
-
-      // Optional: We can use a default image
-      const defaultImage =
-        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
-      handleDecals(type, defaultImage);
+      const response = await fetch("http://localhost:8080/api/v1/dalle", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt,
+        }),
+      });
+      const data = await response.json();
+      handleDecals(type, `data:image/png;base64,${data.photo}`);
     } catch (error) {
-      alert("An error occurred while processing the request");
-      console.error(error);
+      alert(error);
     } finally {
       setGeneratingImg(false);
       setActiveEditorTab("");
@@ -121,15 +87,16 @@ const Customizer = () => {
         state.isFullTexture = !activeFilterTab[tabName];
         break;
       default:
-        state.isFullTexture = true;
-        state.isLogoTexture = false;
+        state.isLogoTexture = true;
+        state.isFullTexture = false;
         break;
     }
-
-    setActiveFilterTab((prevState) => ({
-      ...prevState,
-      [tabName]: !prevState[tabName],
-    }));
+    setActiveFilterTab((prevState) => {
+      return {
+        ...prevState,
+        [tabName]: !prevState[tabName],
+      };
+    });
   };
 
   const readFile = (type) => {
@@ -184,6 +151,15 @@ const Customizer = () => {
                 handleClick={() => handleActiveFilterTab(tab.name)}
               />
             ))}
+            <button
+              className="download-btn"
+              onClick={downloadCanvasToImage}>
+              <img
+                src={download}
+                alt="download_image"
+                className="object-contain w-3/5 h-3/5"
+              />
+            </button>
           </motion.div>
         </>
       )}
